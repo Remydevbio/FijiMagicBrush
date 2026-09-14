@@ -45,7 +45,11 @@ Space overrides resize. Alt overrides Shift; Ctrl also subtracts. The Linux wind
 
 History keeps 30 strokes for the current image/plane context. Changing image/channel/Z/time or invoking another ImageJ command cancels pending work and resets plugin history; native commands then retain their own undo behavior. External ROI replacement also resets history. Line/point selections must be cleared before using these area tools.
 
-The internal AWT `Area` is rasterized to a source-resolution binary mask and converted with ImageJ's topology-aware `ThresholdToSelection`; holes and disconnected regions are retained. For development diagnosis, the options dialog can log a pixel-level comparison between that internal mask and the final ImageJ ROI. Each completed or previewed update reports internal, ROI, extra, and missing pixel counts in ImageJ's Log window. Leave this disabled during normal use.
+### Experimental ROI-hole feature: unsuitable for large images
+
+This feature branch rasterizes the complete accumulated AWT `Area` into a source-resolution binary mask before every ROI preview, then converts it with ImageJ's topology-aware `ThresholdToSelection`. It preserves holes and disconnected regions, but this is a poor performance adaptation for large images or large brush selections: its time and memory cost grow with the full selected ROI bounding box, and repeated drag previews repeat that work. Use it only to diagnose or confirm topology issues on small selections. It should not be treated as a production solution for large images.
+
+For development diagnosis, the options dialog can log a pixel-level comparison between that internal mask and the final ImageJ ROI. Each completed or previewed update reports internal, ROI, extra, and missing pixel counts in ImageJ's Log window. Leave this disabled during normal use.
 
 ## Sampling and geometry
 

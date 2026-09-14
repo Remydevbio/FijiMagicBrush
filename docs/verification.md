@@ -6,7 +6,9 @@ The selection pipeline was traced from raw sampling through display. Smart flood
 
 A ring mask with a 4×3 internal hole and a disconnected 2×2 island contained 62 selected pixels before conversion. Its `ShapeRoi` contained 62 pixels: **0 extra and 0 missing**. Both `Roi.contains` and `Roi.getMask()` left the hole unselected. Equivalent comparisons for smart selections on byte, short, float, and RGB processors also report zero extra and zero missing pixels. This proves that `Area → ShapeRoi` does not fill internal blank regions in the tested pipeline.
 
-Native testing then exposed a small fractional-geometry discrepancy in direct `Area → ShapeRoi` conversion: 1,254 internal pixels became 1,251 ROI pixels, with 2 extra and 5 missing. Publication now rasterizes the internal `Area` at source-pixel centers into a 0/255 `ByteProcessor` and converts it with ImageJ's topology-aware `ThresholdToSelection`. An opt-in options-dialog diagnostic compares the internal selection and final ROI and writes internal, ROI, extra, and missing counts to the ImageJ Log window. It is disabled by default and does not change sensitivity or zoom behavior.
+Native testing then exposed a small fractional-geometry discrepancy in direct `Area → ShapeRoi` conversion: 1,254 internal pixels became 1,251 ROI pixels, with 2 extra and 5 missing. This feature branch rasterizes the internal `Area` at source-pixel centers into a 0/255 `ByteProcessor` and converts it with ImageJ's topology-aware `ThresholdToSelection`.
+
+This is intentionally documented as an **experimental diagnostic adaptation, unsuitable for large images**. Every preview allocates and scans the complete accumulated selection bounding box, which makes drag latency and memory use grow rapidly for large ROIs. It accurately demonstrates topology preservation but should not be merged as the production performance solution. An opt-in options-dialog diagnostic compares the internal selection and final ROI and writes internal, ROI, extra, and missing counts to the ImageJ Log window. It is disabled by default and does not change sensitivity or zoom behavior.
 
 ## 2026-09-14 adaptive diameter update
 

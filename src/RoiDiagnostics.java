@@ -24,7 +24,11 @@ public final class RoiDiagnostics {
         }
         return c;
     }
-    /** Rasterize at source-pixel centers, then use ImageJ's topology-aware converter. */
+    /**
+     * Experimental diagnostic conversion, not a production path for large ROIs.
+     * It allocates and scans every source pixel in the accumulated Area bounds on
+     * every preview, so memory and latency grow rapidly with selection extent.
+     */
     public static Roi toRoi(Area internal,int width,int height){
         Rectangle b=internal.getBounds().intersection(new Rectangle(0,0,width,height));
         if(b.isEmpty())return null;
