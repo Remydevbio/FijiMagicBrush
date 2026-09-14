@@ -2,9 +2,15 @@
 
 Compiled ImageJ plugin providing **Selection Brush Tool** (B icon) and **Intensity Smart Brush Tool** (W icon). Native area ROIs preserve holes and disconnected regions. Source pixels are never written.
 
+The intensity-aware behavior is based on QuPath's Wand tool, particularly its local smoothing, seed-connected flood fill, and intensity-similarity approach. This project is an independent Fiji/ImageJ implementation and does not copy QuPath source code. QuPath and its contributors are credited as the behavioral and algorithmic reference; exact source links and implementation differences are documented in [docs/research.md](docs/research.md).
+
+Code generated with OpenAI Codex, then built and tested against Fiji/ImageJ and the supplied multichannel image.
+
 ## Install and run
 
 Tested with the installed Fiji **2.18.0 / ImageJ 1.54p**, bundled Zulu **21.0.7** JDK, Linux/X11. No Maven, network, or added libraries are needed to build.
+
+For a ready-to-install build, copy `dist/Intensity_Selection_Tools.jar` into Fiji's `plugins/` directory and restart Fiji.
 
 ```sh
 cd /home/rbonnav/Documents/Codex/2026-09-13-brushtoolFiji

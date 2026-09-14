@@ -1,9 +1,12 @@
 # Build products and runtime output
 /build/
-/dist/
 *.class
 *.jar
 *.log
+
+# Keep the tested release JAR, ignore any other distribution output
+/dist/*
+!/dist/Intensity_Selection_Tools.jar
 
 # Generated and local test data
 /test-images/
