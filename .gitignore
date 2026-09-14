@@ -1,0 +1,66 @@
+# Build products and runtime output
+/build/
+/dist/
+*.class
+*.jar
+*.log
+
+# Generated and local test data
+/test-images/
+/docs/evidence/
+
+# Downloaded upstream source/API snapshots
+/research/
+
+# Codex/runtime metadata
+/.agents/
+/.codex/
+/AGENTS.md
+
+# IDE and editor files
+/.idea/
+/.vscode/
+*.iml
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Local environments and caches
+/.gradle/
+/.mvn/wrapper/maven-wrapper.jar
+/target/
+/out/
+/.cache/
+/.pytest_cache/
+/__pycache__/
+*.py[cod]
+/.env
+/.env.*
+!.env.example
+
+# Credentials, private keys, certificates, and signing stores
+*.pem
+*.key
+*.p8
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+id_rsa*
+id_dsa*
+id_ecdsa*
+id_ed25519*
+*.credentials
+credentials.json
+secrets.*
+*.secret
+*.token
+auth.json
+service-account*.json
+
+# Local machine configuration
+*.local
+local.properties
