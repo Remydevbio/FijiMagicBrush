@@ -34,12 +34,12 @@ Restart Fiji, then choose **Plugins → Selection Tools → Install Brush and Sm
 | Space + left drag | Temporary pan; does not paint |
 | Space during painting | Cancel that uncommitted stroke, restore starting ROI, then pan |
 | Release Space during a drag | Stop panning; release mouse before starting another stroke |
-| Hold Q + wheel | Smooth size adjustment, 3–256 source-image pixels; no zoom |
+| Hold Q + wheel | Smooth size adjustment, 3–256 pixels at 100% zoom |
 | Ordinary wheel / Ctrl-wheel | Existing ImageJ scroll / zoom behavior |
 | Escape | Cancel pending stroke and restore starting ROI |
 | Ctrl+Z or Edit → Undo | Undo one stroke |
 | Ctrl+Y / Ctrl+Shift+Z | Redo one stroke |
-| Double-click tool icon | Raw channel, image-pixel size, smoothing, sensitivity, tolerance, resize key |
+| Double-click tool icon | Fixed/adaptive size, raw channel, smoothing, sensitivity, tolerance, resize key |
 
 Space overrides resize. Alt overrides Shift; Ctrl also subtracts. The Linux window manager intercepted Alt-drag during testing, so Ctrl is provided without altering desktop settings. Q is intercepted only while held over an image canvas with these tools selected; text fields and other tools retain their bindings. Resize key may be changed to A–W in the tool options. Wheel deltas are multiplicative, including fractional trackpad deltas.
 
@@ -47,17 +47,17 @@ History keeps 30 strokes for the current image/plane context. Changing image/cha
 
 ## Sampling and geometry
 
-The cyan circle is the **full local footprint**, drawn in image coordinates so it grows on screen when zooming in and shrinks when zooming out. Status shows mode, operation, image/screen diameters, raw channel, sigma, sensitivity and the last worker batch time.
+The cyan circle is the **full local footprint**. Double-click either tool and enable **Adaptive diameter (constant displayed size, QuPath-style)** to make its image-space diameter change inversely with magnification. For example, an 80-pixel setting uses 320 image pixels at 25% zoom, 80 at 100%, and 20 at 400%, so the displayed footprint remains about 80 screen pixels. Fixed mode preserves the original behavior: the footprint grows on screen when zooming in and shrinks when zooming out. Status shows the active size mode and both diameters.
 
-Diameter is stored in source-image pixels. For magnification `m`, `Dscreen = Dimage * m`. ImageJ's `offScreenX/Y` methods identify the exact source pixel under the pointer; processing begins at that pixel center.
+Diameter is stored as its value at 100% zoom. In fixed mode, `Dimage = Dsetting`; in adaptive mode, `Dimage = max(1, Dsetting / m)`. In both modes, `Dscreen = Dimage * m`. ImageJ's `offScreenX/Y` methods identify the exact source pixel under the pointer; processing begins at that pixel center.
 
-Smart mode uses a bounded odd-sized grid (at most 257 × 257), with exactly one grid cell per source pixel. Display magnification is not an input to segmentation. The same seed, image-pixel diameter and settings produce the same source-pixel mask at every zoom.
+Smart mode uses an odd-sized grid with exactly one grid cell per source pixel. Fixed mode does not use display magnification and produces the same source-pixel mask at every zoom. Adaptive mode uses magnification only to calculate the circular footprint; it never resamples the rendered canvas or repeats subpixel samples. Gaussian sigma and intensity comparisons remain in raw source-pixel units.
 
 A separable Gaussian (default sigma 4 source pixels, radius `ceil(2*sigma)`, reflected borders) precedes four-connected, fixed-seed region growing. A pixel qualifies when its raw channel value differs from the smoothed seed by at most local standard deviation / sensitivity (default 2). Alternatively enable absolute tolerance in raw channel units (default 10). Sigma 0 disables smoothing. Nonfinite pixels are barriers and a nonfinite seed selects nothing. The circular footprint and image boundary clip the result.
 
-The smart brush always reads the underlying processor. Channel 0 means the active channel; a positive channel number locks sampling to that channel on the current Z/T plane. LUT, brightness/contrast, overlay, pan and zoom changes cannot affect segmentation. Grayscale 8/16/32-bit values retain their native units. RGB images use their three stored 0–255 components.
+The smart brush always reads the underlying processor. Channel 0 means the active channel; a positive channel number locks sampling to that channel on the current Z/T plane. LUT, brightness/contrast, overlay and pan cannot affect segmentation. Zoom affects only footprint size when adaptive mode is enabled. Grayscale 8/16/32-bit values retain their native units. RGB images use their three stored 0–255 components.
 
-Processing settings freeze at stroke start. Zoom may occur between strokes without changing results. Resizing, focus loss and image/channel/Z/T changes cancel the uncommitted stroke. The worker coalesces pending pointer updates and interpolates between them; under load very fast curved motion can be simplified.
+Processing settings and magnification freeze at stroke start. Zoom may occur between strokes; fixed mode keeps the same mask, while adaptive mode recalculates the next stroke's footprint. Resizing, focus loss and image/channel/Z/T changes cancel the uncommitted stroke. The worker coalesces pending pointer updates and interpolates between them; under load very fast curved motion can be simplified.
 
 ## Verification and reference
 

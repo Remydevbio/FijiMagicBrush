@@ -20,6 +20,16 @@ public class EngineTest {
   ByteProcessor contrast=new ByteProcessor(201,201);for(int y=0;y<201;y++)for(int x=0;x<201;x++)contrast.set(x,y,x<100?25:220);
   SelectionEngine.Settings invariant=settings();invariant.diameter=149;invariant.tolerance=5;
   Area reference=null;for(double zoom:new double[]{.25,.5,1,2,4,8}){Area mask=SelectionEngine.smart(new SelectionEngine.Pixels(contrast,false),80.5,100.5,zoom,invariant,()->false);ok(!mask.contains(120.5,100.5),"large contrast rejected at "+zoom+"x");if(reference==null)reference=mask;else{Area diff=new Area(reference);diff.exclusiveOr(mask);ok(diff.isEmpty(),"identical mask at "+zoom+"x");}}
+  SelectionEngine.Settings adaptive=settings();adaptive.diameter=80;adaptive.adaptiveDiameter=true;adaptive.tolerance=255;
+  ok(SelectionEngine.effectiveDiameter(adaptive,.25)==320,"adaptive zoom-out image diameter");
+  ok(SelectionEngine.effectiveDiameter(adaptive,1)==80,"adaptive 100% image diameter");
+  ok(SelectionEngine.effectiveDiameter(adaptive,4)==20,"adaptive zoom-in image diameter");
+  for(double zoom:new double[]{.25,1,4}){
+   Area mask=SelectionEngine.smart(new SelectionEngine.Pixels(new ByteProcessor(500,500),false),250.5,250.5,zoom,adaptive,()->false);
+   double screenWidth=mask.getBounds2D().getWidth()*zoom;
+   ok(Math.abs(screenWidth-adaptive.diameter)<=2*zoom,"adaptive displayed footprint at "+zoom+"x");
+  }
+  adaptive.tolerance=5;for(double zoom:new double[]{.25,1,4}){Area mask=SelectionEngine.smart(new SelectionEngine.Pixels(contrast,false),80.5,100.5,zoom,adaptive,()->false);ok(!mask.contains(120.5,100.5),"adaptive raw contrast rejected at "+zoom+"x");}
   Roi r=new ShapeRoi(new Ellipse2D.Double(100,200,30,40));ok(Intensity_Selection_Tools.area(r).contains(115,220),"ROI global transform");
   SelectionHistory h=new SelectionHistory();h.reset(null);h.commit(r);ok(h.undo()==null,"undo empty");ok(h.redo().contains(115,220),"redo");
   ByteProcessor islands=new ByteProcessor(101,101);islands.set(50,50,200);islands.set(51,51,200);

@@ -1,5 +1,11 @@
 # Verification results
 
+## 2026-09-14 adaptive diameter update
+
+The optional **Adaptive diameter (constant displayed size, QuPath-style)** mode follows QuPath's magnification-scaled brush behavior: the image-space footprint is the configured 100% diameter divided by the current magnification. Fixed mode remains the default and retains exact zoom-invariant source masks.
+
+The headless suite passes **53 assertions**, including effective-diameter and mask-footprint checks at 0.25×, 1× and 4× plus raw-intensity discrimination at each zoom. The native Fiji harness passes **37 interaction assertions**, including checks that an adaptive plain-brush ROI changes its image-coordinate width with zoom and that the cyan cursor matches the painted footprint. Gaussian sigma remains in source-image pixels so magnification changes brush geometry without switching to rendered-canvas intensity data.
+
 ## 2026-09-14 zoom-invariance update
 
 The revised build passes **44 synthetic engine assertions**, a headless regression on the supplied multichannel image, **35 native Fiji interaction assertions**, and **7 native Fiji assertions on channel 2 of the supplied image**.

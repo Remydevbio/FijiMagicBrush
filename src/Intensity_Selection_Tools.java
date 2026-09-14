@@ -139,23 +139,24 @@ public class Intensity_Selection_Tools implements PlugIn {
         void drawCursor(){
             clearCursor();if(canvas==null||image==null)return;
             if(space){canvas.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));IJ.showStatus("Pan — selection gesture cancelled; release mouse before painting again");return;}
-            canvas.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));double m=canvas.getMagnification(),d=settings.diameter;cursorMag=m;
+            canvas.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));double m=canvas.getMagnification(),d=SelectionEngine.effectiveDiameter(settings,m);cursorMag=m;
             cursor=new OvalRoi(canvas.offScreenXD(pointer.x)-d/2,canvas.offScreenYD(pointer.y)-d/2,d,d);cursor.setStrokeColor(Color.CYAN);cursor.setStrokeWidth(1);cursor.setPosition(image.getC(),image.getZ(),image.getT());
             Overlay o=image.getOverlay();if(o==null){o=new Overlay();image.setOverlay(o);}cursorOverlay=o;o.add(cursor);canvas.repaint();
-            IJ.showStatus((smart()?"Smart":"Brush")+String.format(" | %.1f image px / %.1f screen px | %s | raw channel | %s+wheel resize | sigma %.1f, sensitivity %.2f | %.1f ms",d,d*m,gesture==null?"inside continues / outside replaces / Shift add / Ctrl or Alt subtract":gesture.op<0?"subtract":gesture.op>0?"add":"replace",KeyEvent.getKeyText(resizeKey),settings.sigma,settings.sensitivity,lastLatency));
+            IJ.showStatus((smart()?"Smart":"Brush")+String.format(" | %.1f image px / %.1f screen px | %s size | %s | raw channel | %s+wheel resize | sigma %.1f, sensitivity %.2f | %.1f ms",d,d*m,settings.adaptiveDiameter?"adaptive":"fixed",gesture==null?"inside continues / outside replaces / Shift add / Ctrl or Alt subtract":gesture.op<0?"subtract":gesture.op>0?"add":"replace",KeyEvent.getKeyText(resizeKey),settings.sigma,settings.sensitivity,lastLatency));
         }
         void options(){
             cancel();clearCursor();resetKeys();GenericDialog gd=new GenericDialog("Intensity selection tools");
-            gd.addNumericField("Diameter (source image pixels, 3–256)",settings.diameter,1);
+            gd.addNumericField("Diameter at 100% zoom (pixels, 3–256)",settings.diameter,1);
+            gd.addCheckbox("Adaptive diameter (constant displayed size, QuPath-style)",settings.adaptiveDiameter);
             gd.addNumericField("Channel (0 = active)",settings.channel,0);
             gd.addNumericField("Gaussian sigma (processing pixels, 0–8)",settings.sigma,1);
             gd.addNumericField("Sensitivity (local SD / value)",settings.sensitivity,2);
             gd.addCheckbox("Use absolute tolerance instead of local SD",settings.absolute);
             gd.addNumericField("Absolute tolerance (raw channel units)",settings.tolerance,2);
             gd.addStringField("Resize key (single letter)",KeyEvent.getKeyText(resizeKey),2);gd.showDialog();if(gd.wasCanceled())return;
-            double d=gd.getNextNumber();double ch=gd.getNextNumber(),sigma=gd.getNextNumber(),sens=gd.getNextNumber();boolean absolute=gd.getNextBoolean();double tol=gd.getNextNumber();String key=gd.getNextString().trim().toUpperCase();
+            double d=gd.getNextNumber();boolean adaptive=gd.getNextBoolean();double ch=gd.getNextNumber(),sigma=gd.getNextNumber(),sens=gd.getNextNumber();boolean absolute=gd.getNextBoolean();double tol=gd.getNextNumber();String key=gd.getNextString().trim().toUpperCase();
             if(!Double.isFinite(d)||d<3||d>256||!Double.isFinite(ch)||ch<0||ch!=Math.floor(ch)||!Double.isFinite(sigma)||sigma<0||sigma>8||!Double.isFinite(sens)||sens<=0||!Double.isFinite(tol)||tol<0||!key.matches("[A-W]")||key.equals("Z")){IJ.error("Invalid settings","Use the documented ranges; resize key must be A–W (Space and undo keys are reserved).");return;}
-            settings.diameter=d;settings.channel=(int)ch;settings.sigma=sigma;settings.sensitivity=sens;settings.absolute=absolute;settings.tolerance=tol;resizeKey=key.charAt(0);
+            settings.diameter=d;settings.adaptiveDiameter=adaptive;settings.channel=(int)ch;settings.sigma=sigma;settings.sensitivity=sens;settings.absolute=absolute;settings.tolerance=tol;resizeKey=key.charAt(0);drawCursor();
         }
         void close(){cancel();clearCursor();timer.stop();Executer.removeCommandListener(this);KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(this);worker.shutdownNow();closed=true;pop();}
         class Gesture {
@@ -167,8 +168,8 @@ public class Intensity_Selection_Tools implements PlugIn {
             void drain(){try{
                 while(!cancelled){Point2D.Double target;boolean done;synchronized(this){target=pending;pending=null;done=finished;if(target==null){running=false;}}
                     if(target==null){if(done)publish(true);return;}
-                    long t=System.nanoTime();double spacing=Math.max(.25,s.diameter/8);int steps=last==null?1:Math.max(1,(int)Math.ceil(last.distance(target)/spacing));Point2D.Double from=last==null?target:last;
-                    for(int i=1;i<=steps&&!cancelled;i++){double x=from.x+(target.x-from.x)*i/steps,y=from.y+(target.y-from.y)*i/steps;Area a=smart?SelectionEngine.smart(pixels,x,y,m,s,()->cancelled):SelectionEngine.brush(x,y,s.diameter,pixels.ip.getWidth(),pixels.ip.getHeight());painted.add(a);}
+                    long t=System.nanoTime();double d=SelectionEngine.effectiveDiameter(s,m),spacing=Math.max(.25,d/8);int steps=last==null?1:Math.max(1,(int)Math.ceil(last.distance(target)/spacing));Point2D.Double from=last==null?target:last;
+                    for(int i=1;i<=steps&&!cancelled;i++){double x=from.x+(target.x-from.x)*i/steps,y=from.y+(target.y-from.y)*i/steps;Area a=smart?SelectionEngine.smart(pixels,x,y,m,s,()->cancelled):SelectionEngine.brush(x,y,d,pixels.ip.getWidth(),pixels.ip.getHeight());painted.add(a);}
                     last=target;lastLatency=(System.nanoTime()-t)/1e6;publish(false);
                 }
             }catch(Throwable ex){EventQueue.invokeLater(()->{if(gesture==this){cancel();IJ.handleException(ex);}});}}

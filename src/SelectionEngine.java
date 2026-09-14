@@ -7,11 +7,11 @@ import java.util.function.BooleanSupplier;
 /** Local, read-only sampling and geometry. No ImageJ window or event state. */
 public final class SelectionEngine {
     public static final class Settings {
-        /** Diameter and sigma are always expressed in source-image pixels. */
+        /** Diameter is measured at 100% zoom; sigma remains in source-image pixels. */
         public double diameter=149, sensitivity=2, sigma=4, tolerance=10;
-        public boolean absolute=false;
+        public boolean absolute=false, adaptiveDiameter=false;
         public int channel=0;
-        public Settings copy(){Settings s=new Settings();s.diameter=diameter;s.sensitivity=sensitivity;s.sigma=sigma;s.tolerance=tolerance;s.absolute=absolute;s.channel=channel;return s;}
+        public Settings copy(){Settings s=new Settings();s.diameter=diameter;s.sensitivity=sensitivity;s.sigma=sigma;s.tolerance=tolerance;s.absolute=absolute;s.adaptiveDiameter=adaptiveDiameter;s.channel=channel;return s;}
     }
     public static final class Pixels {
         final ImageProcessor ip; final boolean rendered, rgb; final double min,max; final IndexColorModel lut;
@@ -31,11 +31,16 @@ public final class SelectionEngine {
         Area a=new Area(new Ellipse2D.Double(x-diameter/2,y-diameter/2,diameter,diameter));
         a.intersect(new Area(new Rectangle2D.Double(0,0,width,height)));return a;
     }
+    /** Image-space diameter. Adaptive mode keeps the displayed diameter constant. */
+    public static double effectiveDiameter(Settings s,double magnification){
+        double m=Double.isFinite(magnification)&&magnification>0?magnification:1;
+        return Math.max(1,s.adaptiveDiameter?s.diameter/m:s.diameter);
+    }
     public static double resized(double d,double wheel){return Math.max(3,Math.min(256,d*Math.exp(-wheel*Math.log(1.12))));}
-    public static Area smart(Pixels p,double x,double y,double ignoredMagnification,Settings s,BooleanSupplier cancelled){
-        // Deliberately ignore display magnification. Each grid cell maps to exactly
-        // one source pixel, so zoom/LUT/brightness cannot change the mask.
-        double diameter=s.diameter;
+    public static Area smart(Pixels p,double x,double y,double magnification,Settings s,BooleanSupplier cancelled){
+        // Each grid cell still maps to one source pixel. Adaptive mode changes only
+        // the image-space footprint; it never creates repeated subpixel samples.
+        double diameter=effectiveDiameter(s,magnification);
         int n=Math.max(3,(int)Math.ceil(diameter));if(n%2==0)n++;
         double x0=Math.floor(x)-n/2,y0=Math.floor(y)-n/2;
         int channels=p.rgb||p.rendered?3:1, count=n*n,seed=(n/2)*n+n/2;

@@ -40,6 +40,11 @@ public class GuiHarness implements PlugIn {
   ui(()->{canvas.zoomIn(200,100);canvas.requestFocus();});waitIdle();click(180,150);ok(Math.abs(roi().getBounds2D().getWidth()-30)<.01,"zoom preserves image-coordinate brush diameter");
   a=roi();m=canvas.getMagnification();move(180,150);robot.keyPress(17);robot.mouseWheel(-1);robot.keyRelease(17);waitIdle();ok(canvas.getMagnification()>m,"ordinary Ctrl wheel retains native zoom");same(a,"zoom preserves ROI coordinates");
   waitIdle();ok(Math.abs(Intensity_Selection_Tools.instance.cursor.getFloatBounds().width-Intensity_Selection_Tools.instance.settings.diameter)<.01,"cursor image diameter remains stable after zoom");
+  ui(()->{Intensity_Selection_Tools.instance.settings.diameter=40;Intensity_Selection_Tools.instance.settings.adaptiveDiameter=true;imp.deleteRoi();Intensity_Selection_Tools.instance.expected=null;Intensity_Selection_Tools.instance.history.reset(null);});waitIdle();
+  double adaptiveImageDiameter=SelectionEngine.effectiveDiameter(Intensity_Selection_Tools.instance.settings,canvas.getMagnification());click(180,150);
+  ok(Math.abs(roi().getBounds2D().getWidth()-adaptiveImageDiameter)<.01,"adaptive brush changes image diameter with zoom");
+  move(180,150);waitIdle();ok(Math.abs(Intensity_Selection_Tools.instance.cursor.getFloatBounds().width-adaptiveImageDiameter)<.01,"adaptive cursor matches painted footprint");
+  ui(()->Intensity_Selection_Tools.instance.settings.adaptiveDiameter=false);waitIdle();
   double oldDiameter=Intensity_Selection_Tools.instance.settings.diameter;robot.keyPress(KeyEvent.VK_Q);waitIdle();
   ui(()->Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(new MouseWheelEvent(canvas,MouseEvent.MOUSE_WHEEL,System.currentTimeMillis(),0,50,50,50,50,0,false,MouseWheelEvent.WHEEL_UNIT_SCROLL,3,0,.25)));waitIdle();robot.keyRelease(KeyEvent.VK_Q);
   ok(Intensity_Selection_Tools.instance.settings.diameter<oldDiameter,"fractional trackpad wheel event resizes");
