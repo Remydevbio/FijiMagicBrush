@@ -45,6 +45,8 @@ Space overrides resize. Alt overrides Shift; Ctrl also subtracts. The Linux wind
 
 History keeps 30 strokes for the current image/plane context. Changing image/channel/Z/time or invoking another ImageJ command cancels pending work and resets plugin history; native commands then retain their own undo behavior. External ROI replacement also resets history. Line/point selections must be cleared before using these area tools.
 
+The internal AWT `Area` is rasterized to a source-resolution binary mask and converted with ImageJ's topology-aware `ThresholdToSelection`; holes and disconnected regions are retained. For development diagnosis, the options dialog can log a pixel-level comparison between that internal mask and the final ImageJ ROI. Each completed or previewed update reports internal, ROI, extra, and missing pixel counts in ImageJ's Log window. Leave this disabled during normal use.
+
 ## Sampling and geometry
 
 The cyan circle is the **full local footprint**. Double-click either tool and enable **Adaptive diameter (constant displayed size, QuPath-style)** to make its image-space diameter change inversely with magnification. For example, an 80-pixel setting uses 320 image pixels at 25% zoom, 80 at 100%, and 20 at 400%, so the displayed footprint remains about 80 screen pixels. Fixed mode preserves the original behavior: the footprint grows on screen when zooming in and shrinks when zooming out. Status shows the active size mode and both diameters.

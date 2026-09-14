@@ -30,6 +30,7 @@ public class Intensity_Selection_Tools implements PlugIn {
         ImagePlus image;ImageCanvas canvas;Roi expected,cursor;Overlay cursorOverlay;
         int plane,resizeKey=KeyEvent.VK_Q;boolean space,resize,held,pan,blocked,closed,updating;
         int px,py,lastInputX,lastInputY;Point pointer=new Point();Gesture gesture;long serial;volatile double lastLatency;double cursorMag;
+        volatile RoiDiagnostics.Counts lastRoiDiagnostics;
         Controller(){Toolkit.getDefaultToolkit().getSystemEventQueue().push(this);Executer.addCommandListener(this);KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);timer=new Timer(60,e->check());timer.start();}
         boolean active(){return Toolbar.getPlugInTool() instanceof ModeTool;}
         boolean smart(){return active()&&((ModeTool)Toolbar.getPlugInTool()).smart;}
@@ -153,10 +154,11 @@ public class Intensity_Selection_Tools implements PlugIn {
             gd.addNumericField("Sensitivity (local SD / value)",settings.sensitivity,2);
             gd.addCheckbox("Use absolute tolerance instead of local SD",settings.absolute);
             gd.addNumericField("Absolute tolerance (raw channel units)",settings.tolerance,2);
+            gd.addCheckbox("Log internal mask versus final ROI diagnostics",settings.roiDiagnostics);
             gd.addStringField("Resize key (single letter)",KeyEvent.getKeyText(resizeKey),2);gd.showDialog();if(gd.wasCanceled())return;
-            double d=gd.getNextNumber();boolean adaptive=gd.getNextBoolean();double ch=gd.getNextNumber(),sigma=gd.getNextNumber(),sens=gd.getNextNumber();boolean absolute=gd.getNextBoolean();double tol=gd.getNextNumber();String key=gd.getNextString().trim().toUpperCase();
+            double d=gd.getNextNumber();boolean adaptive=gd.getNextBoolean();double ch=gd.getNextNumber(),sigma=gd.getNextNumber(),sens=gd.getNextNumber();boolean absolute=gd.getNextBoolean();double tol=gd.getNextNumber();boolean diagnostics=gd.getNextBoolean();String key=gd.getNextString().trim().toUpperCase();
             if(!Double.isFinite(d)||d<3||d>256||!Double.isFinite(ch)||ch<0||ch!=Math.floor(ch)||!Double.isFinite(sigma)||sigma<0||sigma>8||!Double.isFinite(sens)||sens<=0||!Double.isFinite(tol)||tol<0||!key.matches("[A-W]")||key.equals("Z")){IJ.error("Invalid settings","Use the documented ranges; resize key must be A–W (Space and undo keys are reserved).");return;}
-            settings.diameter=d;settings.adaptiveDiameter=adaptive;settings.channel=(int)ch;settings.sigma=sigma;settings.sensitivity=sens;settings.absolute=absolute;settings.tolerance=tol;resizeKey=key.charAt(0);drawCursor();
+            settings.diameter=d;settings.adaptiveDiameter=adaptive;settings.channel=(int)ch;settings.sigma=sigma;settings.sensitivity=sens;settings.absolute=absolute;settings.tolerance=tol;settings.roiDiagnostics=diagnostics;resizeKey=key.charAt(0);drawCursor();
         }
         void close(){cancel();clearCursor();timer.stop();Executer.removeCommandListener(this);KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(this);worker.shutdownNow();closed=true;pop();}
         class Gesture {
@@ -175,7 +177,8 @@ public class Intensity_Selection_Tools implements PlugIn {
             }catch(Throwable ex){EventQueue.invokeLater(()->{if(gesture==this){cancel();IJ.handleException(ex);}});}}
             void publish(boolean commit){
                 Area result=new Area(painted);if(op!=0&&before!=null){Area base=area(before);if(op>0)base.add(result);else base.subtract(result);result=base;}else if(op<0)result=new Area();
-                final Roi roi=result.isEmpty()?null:new ShapeRoi(result);
+                final Roi roi=RoiDiagnostics.toRoi(result,imp.getWidth(),imp.getHeight());
+                if(s.roiDiagnostics){RoiDiagnostics.Counts c=RoiDiagnostics.compare(result,roi,imp.getWidth(),imp.getHeight());lastRoiDiagnostics=c;IJ.log("Brush ROI conversion diagnostic: internal mask pixels="+c.internalPixels+", ROI pixels="+c.roiPixels+", extra="+c.extraPixels+", missing="+c.missingPixels);}
                 if(roi!=null){int[] pos=imp.convertIndexToPosition(plane);roi.setPosition(pos[0],pos[1],pos[2]);}
                 EventQueue.invokeLater(()->{
                     if(cancelled||gesture!=this||serial!=id||!active()||WindowManager.getCurrentImage()!=imp||imp.getCurrentSlice()!=plane)return;

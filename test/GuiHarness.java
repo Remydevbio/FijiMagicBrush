@@ -42,9 +42,11 @@ public class GuiHarness implements PlugIn {
   waitIdle();ok(Math.abs(Intensity_Selection_Tools.instance.cursor.getFloatBounds().width-Intensity_Selection_Tools.instance.settings.diameter)<.01,"cursor image diameter remains stable after zoom");
   ui(()->{Intensity_Selection_Tools.instance.settings.diameter=40;Intensity_Selection_Tools.instance.settings.adaptiveDiameter=true;imp.deleteRoi();Intensity_Selection_Tools.instance.expected=null;Intensity_Selection_Tools.instance.history.reset(null);});waitIdle();
   double adaptiveImageDiameter=SelectionEngine.effectiveDiameter(Intensity_Selection_Tools.instance.settings,canvas.getMagnification());click(180,150);
-  ok(Math.abs(roi().getBounds2D().getWidth()-adaptiveImageDiameter)<.01,"adaptive brush changes image diameter with zoom");
+  ok(Math.abs(roi().getBounds2D().getWidth()-adaptiveImageDiameter)<=1,"adaptive brush changes image diameter with zoom");
   move(180,150);waitIdle();ok(Math.abs(Intensity_Selection_Tools.instance.cursor.getFloatBounds().width-adaptiveImageDiameter)<.01,"adaptive cursor matches painted footprint");
-  ui(()->Intensity_Selection_Tools.instance.settings.adaptiveDiameter=false);waitIdle();
+  ui(()->{Intensity_Selection_Tools.instance.settings.adaptiveDiameter=false;Intensity_Selection_Tools.instance.settings.roiDiagnostics=true;IJ.log("\\Clear");imp.deleteRoi();Intensity_Selection_Tools.instance.expected=null;Intensity_Selection_Tools.instance.history.reset(null);});waitIdle();click(180,150);
+  RoiDiagnostics.Counts nativeCounts=Intensity_Selection_Tools.instance.lastRoiDiagnostics;String nativeDetail=nativeCounts==null?"no counts":"internal="+nativeCounts.internalPixels+", roi="+nativeCounts.roiPixels+", extra="+nativeCounts.extraPixels+", missing="+nativeCounts.missingPixels;ok(nativeCounts!=null&&nativeCounts.extraPixels==0&&nativeCounts.missingPixels==0&&nativeCounts.internalPixels==nativeCounts.roiPixels,"native ROI conversion diagnostic reports exact mask ("+nativeDetail+")");
+  ui(()->Intensity_Selection_Tools.instance.settings.roiDiagnostics=false);waitIdle();
   double oldDiameter=Intensity_Selection_Tools.instance.settings.diameter;robot.keyPress(KeyEvent.VK_Q);waitIdle();
   ui(()->Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(new MouseWheelEvent(canvas,MouseEvent.MOUSE_WHEEL,System.currentTimeMillis(),0,50,50,50,50,0,false,MouseWheelEvent.WHEEL_UNIT_SCROLL,3,0,.25)));waitIdle();robot.keyRelease(KeyEvent.VK_Q);
   ok(Intensity_Selection_Tools.instance.settings.diameter<oldDiameter,"fractional trackpad wheel event resizes");

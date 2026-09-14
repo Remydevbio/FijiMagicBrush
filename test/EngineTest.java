@@ -1,5 +1,6 @@
 import ij.process.*;
 import ij.gui.*;
+import java.awt.Rectangle;
 import java.awt.geom.*;
 public class EngineTest {
  static int tests;
@@ -12,6 +13,7 @@ public class EngineTest {
    SelectionEngine.Settings s=settings();SelectionEngine.Pixels p=new SelectionEngine.Pixels(ip,false);
    Area a=SelectionEngine.smart(p,55.5,55.5,1,s,()->false);
    ok(a.contains(55.5,55.5),"seed "+ip);ok(!a.contains(70.5,70.5),"hole "+ip);ok(!a.contains(20,20),"background");ok(a.getBounds2D().getWidth()<=101.0001,"bounded");
+   RoiDiagnostics.Counts smartCounts=RoiDiagnostics.compare(a,new ShapeRoi(a),ip.getWidth(),ip.getHeight());ok(smartCounts.extraPixels==0&&smartCounts.missingPixels==0,"smart internal mask equals ShapeRoi "+ip);
    Area z=SelectionEngine.smart(p,55.5,55.5,2,s,()->false);a.exclusiveOr(z);ok(a.isEmpty(),"zoom-invariant exact source mask");
   }
   FloatProcessor f=new FloatProcessor(101,101);f.setf(50,50,Float.NaN);ok(SelectionEngine.smart(new SelectionEngine.Pixels(f,false),50.5,50.5,1,settings(),()->false).isEmpty(),"NaN seed");
@@ -39,6 +41,11 @@ public class EngineTest {
   ok(connected.contains(51.5,51.5),"one-pixel bridge connects at native resolution");
   byte[] original=((byte[])islands.getPixels()).clone();SelectionEngine.smart(new SelectionEngine.Pixels(islands,false),50.5,50.5,.25,settings(),()->false);ok(java.util.Arrays.equals(original,(byte[])islands.getPixels()),"sampling leaves pixels unchanged");
   Area edge=SelectionEngine.smart(new SelectionEngine.Pixels(islands,false),.5,.5,.25,settings(),()->false);ok(edge.getBounds2D().getMinX()>=-1e-9&&edge.getBounds2D().getMinY()>=-1e-9,"edge clipping");
+  Area ring=new Area(new Rectangle2D.Double(10,10,10,7));ring.subtract(new Area(new Rectangle2D.Double(13,12,4,3)));ring.add(new Area(new Rectangle2D.Double(25,10,2,2)));
+  ShapeRoi ringRoi=new ShapeRoi(ring);RoiDiagnostics.Counts counts=RoiDiagnostics.compare(ring,ringRoi,40,30);
+  ok(counts.internalPixels==62,"diagnostic internal ring and island pixel count");ok(counts.roiPixels==counts.internalPixels,"ShapeRoi pixel count matches internal mask");ok(counts.extraPixels==0,"ShapeRoi introduces no pixels");ok(counts.missingPixels==0,"ShapeRoi loses no pixels");ok(!ringRoi.contains(14,13),"ShapeRoi contains preserves central hole");
+  ImageProcessor ringMask=ringRoi.getMask();Rectangle ringBounds=ringRoi.getBounds();ok(ringMask!=null&&ringMask.get(14-ringBounds.x,13-ringBounds.y)==0,"ShapeRoi mask preserves central hole");
+  Roi thresholdRing=RoiDiagnostics.toRoi(ring,40,30);counts=RoiDiagnostics.compare(ring,thresholdRing,40,30);ok(counts.extraPixels==0&&counts.missingPixels==0,"ThresholdToSelection exactly preserves ring mask");ok(!thresholdRing.contains(14,13)&&thresholdRing.contains(25,10),"ThresholdToSelection preserves hole and disconnected island");
   SelectionEngine.Settings defaults=new SelectionEngine.Settings();Area smooth=SelectionEngine.smart(new SelectionEngine.Pixels(Synthetic.make(8).getProcessor(),false),125,190,1,defaults,()->false);ok(smooth.contains(125,190)&&!smooth.contains(165,190),"default smoothing follows raw intensity");
   FloatProcessor large=new FloatProcessor(4096,4096);SelectionEngine.Settings s=settings();s.sigma=4;s.absolute=false;s.diameter=149;
   for(int i=0;i<10;i++)SelectionEngine.smart(new SelectionEngine.Pixels(large,false),2000,2000,.25,s,()->false);

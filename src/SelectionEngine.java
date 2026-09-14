@@ -9,9 +9,9 @@ public final class SelectionEngine {
     public static final class Settings {
         /** Diameter is measured at 100% zoom; sigma remains in source-image pixels. */
         public double diameter=149, sensitivity=2, sigma=4, tolerance=10;
-        public boolean absolute=false, adaptiveDiameter=false;
+        public boolean absolute=false, adaptiveDiameter=false, roiDiagnostics=false;
         public int channel=0;
-        public Settings copy(){Settings s=new Settings();s.diameter=diameter;s.sensitivity=sensitivity;s.sigma=sigma;s.tolerance=tolerance;s.absolute=absolute;s.adaptiveDiameter=adaptiveDiameter;s.channel=channel;return s;}
+        public Settings copy(){Settings s=new Settings();s.diameter=diameter;s.sensitivity=sensitivity;s.sigma=sigma;s.tolerance=tolerance;s.absolute=absolute;s.adaptiveDiameter=adaptiveDiameter;s.roiDiagnostics=roiDiagnostics;s.channel=channel;return s;}
     }
     public static final class Pixels {
         final ImageProcessor ip; final boolean rendered, rgb; final double min,max; final IndexColorModel lut;

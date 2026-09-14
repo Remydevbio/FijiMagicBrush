@@ -1,10 +1,18 @@
 # Verification results
 
+## 2026-09-14 ROI-hole conversion diagnostic
+
+The selection pipeline was traced from raw sampling through display. Smart flood fill records selected source pixels as one-pixel-high runs in a nonzero-winding `Path2D`; `Area` combines those runs and brush dabs; ImageJ receives a `ShapeRoi`. There is no `PolygonRoi`, exterior-only contour trace, `Wand`, or threshold conversion in this path.
+
+A ring mask with a 4×3 internal hole and a disconnected 2×2 island contained 62 selected pixels before conversion. Its `ShapeRoi` contained 62 pixels: **0 extra and 0 missing**. Both `Roi.contains` and `Roi.getMask()` left the hole unselected. Equivalent comparisons for smart selections on byte, short, float, and RGB processors also report zero extra and zero missing pixels. This proves that `Area → ShapeRoi` does not fill internal blank regions in the tested pipeline.
+
+Native testing then exposed a small fractional-geometry discrepancy in direct `Area → ShapeRoi` conversion: 1,254 internal pixels became 1,251 ROI pixels, with 2 extra and 5 missing. Publication now rasterizes the internal `Area` at source-pixel centers into a 0/255 `ByteProcessor` and converts it with ImageJ's topology-aware `ThresholdToSelection`. An opt-in options-dialog diagnostic compares the internal selection and final ROI and writes internal, ROI, extra, and missing counts to the ImageJ Log window. It is disabled by default and does not change sensitivity or zoom behavior.
+
 ## 2026-09-14 adaptive diameter update
 
 The optional **Adaptive diameter (constant displayed size, QuPath-style)** mode follows QuPath's magnification-scaled brush behavior: the image-space footprint is the configured 100% diameter divided by the current magnification. Fixed mode remains the default and retains exact zoom-invariant source masks.
 
-The headless suite passes **53 assertions**, including effective-diameter and mask-footprint checks at 0.25×, 1× and 4× plus raw-intensity discrimination at each zoom. The native Fiji harness passes **37 interaction assertions**, including checks that an adaptive plain-brush ROI changes its image-coordinate width with zoom and that the cyan cursor matches the painted footprint. Gaussian sigma remains in source-image pixels so magnification changes brush geometry without switching to rendered-canvas intensity data.
+The headless suite passes **65 assertions**, including effective-diameter, ROI-conversion, and mask-footprint checks at 0.25×, 1× and 4× plus raw-intensity discrimination at each zoom. The native Fiji harness passes **38 interaction assertions**, including checks that an adaptive plain-brush ROI changes its image-coordinate width with zoom, the cyan cursor matches the painted footprint, and ROI conversion adds or loses no selected pixels. Gaussian sigma remains in source-image pixels so magnification changes brush geometry without switching to rendered-canvas intensity data.
 
 ## 2026-09-14 zoom-invariance update
 
